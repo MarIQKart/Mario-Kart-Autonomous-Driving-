@@ -3,11 +3,10 @@
 # ================================================================================
 #
 # Input:
-#   * frame_img:     numpy array representing the rgb pixel-array of the frame
+#   * frame_img:     numpy array representing the rgb pixel-array of the frame 
+#                    (assumed minimap is toggled off the road)
 #   * n_features:    The desired length of the state vector (size of state space
 #                    = 3^n_features. I would recommend no more than 7)
-#   * resize_scale:  factor to divide the original image dimensions by
-#                    (larger factor may lead to imprecision, but will be faster)
 #   * center_margin: acceptable margin for the average canny edge to be considered "center"
 #
 # Output:
@@ -22,13 +21,13 @@
 # Task:
 #   1. Convert the Frame to Grayscale
 #   2. Resize the frame by the given scaling factor
-#   3. Select a row to represent each feature (number of rows=desired number of 
+#   3. Find the canny edges in the transformed image
+#   4. Select a row to represent each feature (number of rows=desired number of 
 #      features)
-#   4. Find the canny edges in the transformed
 #   5. Find the average index of the canny edges in each representative row
 #   6. Map the average to a representative feature value
 #         * -1: the average is on the left side of the screen
-#         *  0: the average is "close enough" to the center (within center_margin)
+#         *  0: the average is "close enough" to the center (within center_margin*width)
 #         * +1: the average is on the right side of the screen
 #   7. Return the representative feature values as an ordered tuple
 #
@@ -45,11 +44,10 @@ def frame_to_state( frame_img , n_features=5 , center_margin=0.05 ):
     img   = Image.fromarray( np.uint8( frame_img ) )
     gray  = img.convert( 'L' )
     small = gray.resize( ( gray.size[0]//resize_scale , gray.size[1]//resize_scale ) )
-    crop  = np.asarray(small)[:,small.size[0]-140:140]
-    edges = cv2.Canny( crop , 150 , 200 )
+    edges = cv2.Canny( np.asarray( small ) , 150 , 200 )
     
     # === Select Representative Rows === #
-    rows = [ i for i in range( edges.shape[0]//2 , edges.shape[0] , edges.shape[0]//2//n_features ) ]
+    rows = [ i for i in range( edges.shape[0]//2 , edges.shape[0]-int(edges.shape[0]*0.1) , (edges.shape[0]-int(edges.shape[0]*0.1))//2//n_features ) ]
     while len( rows ) > n_features:
         rows = rows[:-1]
         
