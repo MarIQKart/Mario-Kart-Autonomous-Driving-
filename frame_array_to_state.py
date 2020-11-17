@@ -36,6 +36,7 @@ def frame_to_state( frame_img , n_features=5 , center_margin=0.05 ):
     
     # === Necessary Imports === #
     from PIL import Image
+    import cv2
     
     # === Housekeeping === #
     resize_scale = 5
