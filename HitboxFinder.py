@@ -1,19 +1,19 @@
-#================================================================================
+# ================================================================================
 # FILE: HitboxFinder.py
-#================================================================================
+# ================================================================================
 # DESCRIPTION:
-#================================================================================
+# ================================================================================
 #
 # This file contains a class definition for a HitboxFinder, which determines the
 # hitbox of the vehicle in the given frame using a Template Matching algorithm
-# with the use of opencv (opencv-python) for Template Matching, numpy for 
-# representation of pixel arrays, Python Image Library (PIL) for use reading the 
+# with the use of opencv (opencv-python) for Template Matching, numpy for
+# representation of pixel arrays, Python Image Library (PIL) for use reading the
 # template image file, and matplotlib.pyplot for debugging purposes to draw the
 # image with hitbox as a pyplot
 #
-#================================================================================
+# ================================================================================
 # REQUIREMENTS
-#================================================================================
+# ================================================================================
 #
 #   * numpy:
 #        `pip install numpy`
@@ -27,7 +27,7 @@
 #   * matplotlib
 #        `pip install matplotlib`
 #
-#================================================================================
+# ================================================================================
 
 
 # ================================================================================
@@ -96,7 +96,7 @@
 #        * it is assumed the height will be small enough to fit the hitbox entirely within
 #          the frame when placed approximately lower-center of the frame
 #
-# Output: 
+# Output:
 #   - N/A
 #
 # Task:
@@ -138,7 +138,7 @@
 # Note:
 #   - There is no error handling present for bad files. It is assumed the given file is
 #     valid
-#   - The PIL and numpy packages are required 
+#   - The PIL and numpy packages are required
 #
 # ================================================================================
 # MEMBER FUNCTION: HitboxFinder.show_template( )
@@ -172,15 +172,15 @@
 #   - tuple of the form (top_left, top_right, bottom_left, bottom_right) where
 #        * each item in the tuple corresponds to a corner of the hitbox
 #        * each item in the tuple itself is a tuple of the form (x,y) containing the
-#          x and y coordinates of the given frame at which the hitbox corner is 
+#          x and y coordinates of the given frame at which the hitbox corner is
 #          present
 #
 # Task:
-#   - Use opencv's (cv2) matchTemplate function to find the pixel with the lowest 
-#     square difference to the template 
+#   - Use opencv's (cv2) matchTemplate function to find the pixel with the lowest
+#     square difference to the template
 #   - That pixel's location is the top left
 #   - Calculate appropriate x and y offset from the corresponding attributes
-#   - compute the remaining corners from the top left corner using the width and 
+#   - compute the remaining corners from the top left corner using the width and
 #     height attributes
 #   - return the comptued corners in the appropriate order
 #
@@ -234,122 +234,127 @@
 # 3. (Maybe) further optimize the template matching speed (since 30fps may be hard
 #    with such an expensive algorithm). This can be done by checking a cropped version
 #    of the frame and applying transformations on the hitbox coordinates to correct
-#    for the crop. (say mario stays in the lower 2/3 of the frame, we could crop the 
-#    top ~230 pixels, and if we know he stays 200px from the left/right of the screen, 
+#    for the crop. (say mario stays in the lower 2/3 of the frame, we could crop the
+#    top ~230 pixels, and if we know he stays 200px from the left/right of the screen,
 #    thats another ~400px to crop, and say we know he stays above (<) 600, that's another
 #    ~83 pixels to crop, leaving a 400x470=188,000 instead of 900x683=614700.
 #       * "Maybe" for two reasons:
-#            1. We lose generality by doing this, there may be edge-cases where 
-#               mario('s hat) is barely out of bounds of the crop, and the hitbox is 
+#            1. We lose generality by doing this, there may be edge-cases where
+#               mario('s hat) is barely out of bounds of the crop, and the hitbox is
 #               wrong
 #            2. Doing this is again reliant on whether we use states at all
 #
 # ================================================================================
+import cv2
+import numpy as np
+import Graphics as gfx # Imports the custom drawing module I created
+
 class HitboxFinder:
-    
+
     # ============================================================================
     # Constructor
     # ============================================================================
-    def __init__( self , template_file , x_offset=0 , y_offset=0 , width=0 , height=0 ):
+    def __init__(self, template_file, x_offset=0, y_offset=0, width=0, height=0):
         self.template_file = template_file
-        self.template      = self.get_image( template_file )
-        self.x_offset      = x_offset
-        self.y_offset      = y_offset
-        self.width         = width if width > 0 else self.template.shape[0]
-        self.height        = height if height > 0 else self.template.shape[1]
+        self.template = self.get_image(template_file)
+        self.x_offset = x_offset
+        self.y_offset = y_offset
+        self.width = width if width > 0 else self.template.shape[0]
+        self.height = height if height > 0 else self.template.shape[1]
         return
-    
-    
-    
+
     # ============================================================================
     # String Representation Overload
     # ============================================================================
-    def __repr__( self ):
-        output  = ''
-        output += 'Template File Path: {}\n'.format( self.template_file )
-        output += 'Template Image Dimensions: {}\n'.format( self.template.shape )
-        output += 'Hitbox X Offset (positive=right): {}\n'.format( self.x_offset )
-        output += 'Hitbox Y Offset (positive=down): {}\n'.format( self.y_offset )
-        output += 'Hitbox Width: {}\n'.format( self.width )
-        output += 'Hitbox Height: {}\n'.format( self.height )
+    def __repr__(self):
+        output = ''
+        output += 'Template File Path: {}\n'.format(self.template_file)
+        output += 'Template Image Dimensions: {}\n'.format(self.template.shape)
+        output += 'Hitbox X Offset (positive=right): {}\n'.format(self.x_offset)
+        output += 'Hitbox Y Offset (positive=down): {}\n'.format(self.y_offset)
+        output += 'Hitbox Width: {}\n'.format(self.width)
+        output += 'Hitbox Height: {}\n'.format(self.height)
         return output
-    
-    
-    
+
     # ============================================================================
     # HitboxFinder.get_image( filename )
     # ============================================================================
-    def get_image( self , filename ):
-        
+    def get_image(self, filename):
         # === Necessary Imports === #
-        from PIL import Image
-        import numpy as np
-        
         # === Open, Cast to Numpy, and Return === #
-        return np.asarray( Image.open( filename ) )
-    
-    
-    
+        imgData = cv2.imread(filename)
+        return np.asarray(imgData)
+
     # ============================================================================
     # HitboxFinder.show_template() -- intended use: debugging
     # ============================================================================
-    def show_template( self ):
-        
+    def show_template(self):
         # === Necessary Import === #
-        import matplotlib.pyplot as plt
-        
-        plt.figure( )
-        plt.imshow( self.template )
-        plt.show( )
-        
-        
-        
+        cv2.imshow("IMG", self.template)
+
     # ============================================================================
     # HitboxFinder.get_hitbox_corners( frame )
     # ============================================================================
-    def get_hitbox_corners( self , frame ):
-        
+    def get_hitbox_corners(self, frame):
         # === Import === #
-        import cv2
-        
+
         # === Template Matching === #
-        match_heatmap = cv2.matchTemplate( frame , self.template , cv2.TM_SQDIFF )
-        
+        convertedFrame = np.asarray(frame)
+        match_heatmap = cv2.matchTemplate(convertedFrame, self.template, cv2.TM_SQDIFF)
+
         # === Get the Appropriate Coordinate for Hitbox === #
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc( match_heatmap )
-        
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(match_heatmap)
+
         # === Compute Appropriate Transformations and Dimensions of Hitbox === #
-        top_left     = ( min_loc[0]  + self.x_offset , min_loc[1] + self.y_offset )
-        top_right    = ( top_left[0] + self.width    , top_left[1]                )
-        bottom_left  = ( top_left[0]                 , top_left[1] + self.height  )
-        bottom_right = ( top_left[0] + self.width    , top_left[1] + self.height  )
-        
+        top_left = (min_loc[0] + self.x_offset, min_loc[1] + self.y_offset)
+        top_right = (top_left[0] + self.width, top_left[1])
+        bottom_left = (top_left[0], top_left[1] + self.height)
+        bottom_right = (top_left[0] + self.width, top_left[1] + self.height)
+
         # === Return Ordered Tuple === #
-        return ( top_left , top_right , bottom_left , bottom_right )
-    
-    
-    
+        return (top_left, top_right, bottom_left, bottom_right)
+
     # ============================================================================
     # HitboxFinder.draw_hitbox( frame , hitbox=None ) -- intended use: debugging
+    #
+    # CHANGES:
+    #   1) Adjusted to check the bounds of the image under the event that mario wasn't
+    #   detected in this frame (which happens on occasion)
+    #
+    #   2) Uses the Graphics library I made to make it easy to add a rectangle to the
+    #      image
     # ============================================================================
-    def draw_hitbox( self , frame , hitbox=None ):
-        
-        # === Imports === #
-        import cv2
-        import matplotlib.pyplot as plt
-        
+    def draw_hitbox(self, frame, hitbox=None):
+
         # === Compute Hitbox if Not Given === #
         if hitbox is None:
-            hitbox = self.get_hitbox_corners( frame )
-            
+            hitbox = self.get_hitbox_corners(frame)
+
         # === Draw the Hitbox === #
-        f            = frame.copy( )
-        top_left     = hitbox[0]
+        top_left = hitbox[0]
+        top_right = hitbox[1]
+        bottom_left = hitbox[2]
         bottom_right = hitbox[3]
-        cv2.rectangle( f , top_left , bottom_right , (255, 0, 0) , 4 )
-        
-        # === Show the Results === #
-        plt.figure( )
-        plt.imshow( f )
-        plt.show( )
-        return
+
+        '''
+            @update:
+                Modified the code to display the current
+                hitbox so that it could be integrated with
+                the rest of our drawing code.
+        '''
+        x = top_left[0]
+        y = top_left[1]
+        w = top_right[0] - top_left[0] # Difference in X
+        h = bottom_right[1] - top_right[1] # Difference in Y
+
+        imageWidth, imageHeight = frame.size # Gets the image size
+        if (0 < x < imageWidth) and (0 < y < imageHeight): # Checks if X and Y are in bounds
+            if (0 < x + w < imageWidth) and (0 < y + h < imageHeight): # Checks if x + w and y + h are in bounds
+
+                '''
+                    @update:
+                        gfx class will write the bounding box
+                        onto the current frame as it's passed through
+                        our rendering pipeline.
+                '''
+                gfx.addRect(frame, x, y, w, h, 255, 0, 0) # If the rect it found was in bounds, draw it
