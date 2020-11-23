@@ -1,14 +1,14 @@
-#================================================================================
+# ================================================================================
 # FILE: RLAgent.py
-#================================================================================
+# ================================================================================
 # DESCRIPTION:
-#================================================================================
+# ================================================================================
 #
-# Q-Table implemntation of a reinforcement learning agend for the program. It 
+# Q-Table implemntation of a reinforcement learning agend for the program. It
 # Will learn the appropriate actions to take to remain near the center of the
 # track.
 #
-#================================================================================
+# ================================================================================
 
 
 # ================================================================================
@@ -22,14 +22,14 @@
 #          to and loaded from.
 #
 #   - action_space:
-#        * List of the possible actions to take. For now it's been hard-coded to 
-#          be throttle, left, and right. We may revise to take all keys from the 
-#          EmulatorInterface's input mapping. 
+#        * List of the possible actions to take. For now it's been hard-coded to
+#          be throttle, left, and right. We may revise to take all keys from the
+#          EmulatorInterface's input mapping.
 #
 #   - q_table:
 #        * the model stored in the form of a dictionary of lists. The keys of the
-#          dictionary are the states, and the values are lists of the corresponding 
-#          (value,number) pairs for each action in the action space. 
+#          dictionary are the states, and the values are lists of the corresponding
+#          (value,number) pairs for each action in the action space.
 #             - Value = the current average learned reward for that action with that state
 #             - Number = number of times the state-action pair has been rewarded (for average calcs)
 #
@@ -80,7 +80,7 @@
 #        * Default = 10000
 #        * Number of training episodes before switching to demo mode
 #
-# Output: 
+# Output:
 #   - N/A
 #
 # Task:
@@ -97,7 +97,7 @@
 #        * the length of the state vector to be returned
 #             - 3^n_features possible state vectors
 #   - center_margin=0.05:
-#        * The margin (proportion to frame width) in which a value is considered 
+#        * The margin (proportion to frame width) in which a value is considered
 #          "near enough" to the center
 #
 # Output:
@@ -160,7 +160,7 @@
 #        * one for each of the possible actions in self.action_space
 #
 # Task:
-#   - Return the result of a QTable lookup for the specified state (and action), 
+#   - Return the result of a QTable lookup for the specified state (and action),
 #     with the potential for a default value if no value has been learned yet
 #
 # ================================================================================
@@ -168,8 +168,8 @@
 # ================================================================================
 #
 # Input:
-#   - state: 
-#        * tuple of the form computed by self.frame_to_state representing the current 
+#   - state:
+#        * tuple of the form computed by self.frame_to_state representing the current
 #          state
 #
 # Output:
@@ -288,7 +288,7 @@
 #        * one of the values within self.action_space
 #
 # Task:
-#   - convert the frame to state with the use of value function approximation with 
+#   - convert the frame to state with the use of value function approximation with
 #     state-aggregation
 #   - determine the action to take from the given state
 #   - if training, update the history with the state-action p air
@@ -297,49 +297,50 @@
 #
 # ================================================================================
 class RLAgent:
-    
+
     # ============================================================================
     # Constructor:
     # ============================================================================
-    def __init__( self, 
-                  use_existing_model = True, 
-                  is_training        = True, 
-                  episode_length     = 10, 
-                  max_episodes       = 10000 ):
-        
+    def __init__(self,
+                 use_existing_model=True,
+                 is_training=True,
+                 episode_length=10,
+                 max_episodes=10000):
+
         # === Save/Load Housekeeping === #
         self.model_file = 'model.txt'
-        
+
         # === Action Space Housekeeping === #
-        self.action_space = ['throttle', 'left', 'right']
-        
+        self.action_space = ['left', 'right', 'throttle']
+
         # === Initialize Model === #
-        self.q_table = self.load_model( use_existing_model )
-        
+        self.q_table = self.load_model(use_existing_model)
+
         # === Training Housekeeping === #
-        self.is_training     = is_training
+        self.is_training = is_training
         self.reward_discount = 0.9
-        self.episode         = 0
-        self.max_episodes    = max_episodes
-        
+        self.episode = 0
+        self.max_episodes = max_episodes
+
         # === Explore/Exploit Housekeeping === #
         self.explore_chance = 0.99
-        self.explore_decay  = 0.99
-        self.explore_min    = 0.1
-        
+        self.explore_decay = 0.99
+        self.explore_min = 0.1
+
         # === History Housekeeping === #
-        self.history        = list( )  # maybe give default if we want |history| > 1
+        self.history = list()  # maybe give default if we want |history| > 1
         self.episode_length = episode_length
-        
+
+        # === Image data === #
+        self.processedImage = None
+
         return  # __init__
-    
-    
-    
+
     # ============================================================================
     # RLAgent.frame_to_state
     # ============================================================================
-    def frame_to_state( self , frame , n_features=5 , center_margin=0.05 ):
-        
+    def frame_to_state(self, frame, n_features=5, center_margin=0.05):
+
         # === Necessary Imports === #
         import numpy as np
         import cv2
@@ -348,25 +349,29 @@ class RLAgent:
         resize_scale = 5
 
         # === Image Preprocessing === #
-        gray  = frame.convert( 'L' )
-        small = gray.resize( ( gray.size[0]//resize_scale , gray.size[1]//resize_scale ) )
-        edges = cv2.Canny( np.asarray( small ) , 150 , 200 )
+        gray = frame.convert('L')
+        small = gray.resize((gray.size[0] // resize_scale, gray.size[1] // resize_scale))
+
+        edges = cv2.Canny(np.asarray(small), 150, 200)
+
+        self.processedImage = edges # Stores the current image we processed
 
         # === Select Representative Rows === #
-        rows = [ i for i in range( edges.shape[0]//2 , edges.shape[0]-int(edges.shape[0]*0.1) , (edges.shape[0]-int(edges.shape[0]*0.1))//2//n_features ) ]
-        while len( rows ) > n_features:
+        rows = [i for i in range(edges.shape[0] // 2, edges.shape[0] - int(edges.shape[0] * 0.1),
+                                 (edges.shape[0] - int(edges.shape[0] * 0.1)) // 2 // n_features)]
+        while len(rows) > n_features:
             rows = rows[:-1]
 
         # === Determine Threshold for "Center" === #
-        center = edges.shape[1]//2
-        left   = center - edges.shape[1]*center_margin
-        right  = center + edges.shape[1]*center_margin
+        center = edges.shape[1] // 2
+        left = center - edges.shape[1] * center_margin
+        right = center + edges.shape[1] * center_margin
 
         # === Generate the State "Vector" === #
-        state = tuple( )
+        state = tuple()
         for rowslice in edges[rows]:
-            locs = np.where(rowslice==255)[0]
-            avg  = locs.mean( ) if len( locs ) > 0 else center
+            locs = np.where(rowslice == 255)[0]
+            avg = locs.mean() if len(locs) > 0 else center
 
             # === More Left Edges than Right === #
             if avg < left:
@@ -382,215 +387,203 @@ class RLAgent:
 
         # === Return the State === #
         return state  # frame_to_state
-    
-    
-    
+
     # ============================================================================
     # RLAgent.update_explore_chance
     # ============================================================================
-    def update_explore_chance( self ):
-        
+    def update_explore_chance(self):
+
         # === If the Explore Chance can be Reduced === #
         if self.explore_chance > self.explore_min:
-            
             # === Reduce it === #
             self.explore_chance *= self.explore_decay
-            self.explore_chance  = max( self.explore_chance , self.explore_min )
-            
+            self.explore_chance = max(self.explore_chance, self.explore_min)
+
         return  # update_explore_chance
-            
-            
-            
+
     # ============================================================================
     # RLAgent.get_q_value
     # ============================================================================
-    def get_q_value( self , state , action_idx=None ):
-        
+    def get_q_value(self, state, action_idx=None):
+
         # === If No Action Given, Give Full List === #
         if action_idx is None:
-            return self.q_table.get( state , [(0,0) for _ in range( len( self.action_space ) ) ] )
-        
+            return self.q_table.get(state, [(0, 0) for _ in range(len(self.action_space))])
+
         # === If Given Action, Return the Specific Value === #
         else:
-            return self.q_table.get( state , [(0,0) for _ in range( len( self.action_space ) ) ] )[action_idx]
-        
-        
-        
+            return self.q_table.get(state, [(0, 0) for _ in range(len(self.action_space))])[action_idx]
+
     # ============================================================================
     # RLAgent.select_action
     # ============================================================================
-    def select_action( self , state ):
-        
+    def select_action(self, state):
+
         # === Import Numpy for Random Choice === #
         import numpy as np
-        
+
         # === If Training, Use Stored Explore Probability === #
         if self.is_training:
             explore_chance = self.explore_chance
-        
+
         # === If Demo, Never Explore === #
         else:
             explore_chance = 0
-            
+
         # === If Explore, Choose Random Action === #
-        if np.random.rand( ) < explore_chance:
-            action_idx = np.random.choice( range( len( self.action_space ) ) )
-        
+        if np.random.rand() < explore_chance:
+            action_idx = np.random.choice(range(len(self.action_space)))
+
         # === If Exploit, Use Learned Action with Highest Reward === #
         else:
-            q_value    = self.get_q_value( state )
-            max_value  = max( q_value , key=lambda x: x[0] )
-            action_idx = q_value.index( max_value )
-        
+            q_value = self.get_q_value(state)
+            max_value = max(q_value, key=lambda x: x[0])
+            action_idx = q_value.index(max_value)
+
         # === Return the Chosen Action === #
         return action_idx  # select_action
-    
-    
-    
+
     # ============================================================================
     # RLAgent.calculate_reward
     # ============================================================================
-    def calculate_reward( self , next_state ):
+    def calculate_reward(self, next_state):
         # === Necessary Imports === #
         import numpy as np
-        
+
         # === Reward Function === #
-        reward = 100*len( next_state ) - 100*abs( np.sum( next_state ) )
-        
+        reward = 100 * len(next_state) - 100 * abs(np.sum(next_state))
+
         # === Return Calculated Reward === #
         return reward  # calculate_reward
-    
-    
-    
+
     # ============================================================================
     # RLAgent.apply_reward
     # ============================================================================
-    def apply_reward( self , state , action , reward ):
-        
+    def apply_reward(self, state, action, reward):
+
         # === Get Working Values from Q Table === #
-        q_value = self.get_q_value( state )
-        V , N   = q_value[action]
-        
+        q_value = self.get_q_value(state)
+        V, N = q_value[action]
+
         # === Incremental Average Formula === #
-        V = ( V * N + reward ) / ( N + 1 )
+        V = (V * N + reward) / (N + 1)
         N = N + 1
-        
+
         # === Update "Table" === #
-        q_value[action]     = ( V , N )
+        q_value[action] = (V, N)
         self.q_table[state] = q_value
-        
+
         return  # apply_reward
-    
-    
-    
+
     # ============================================================================
     # RLAgent.propagate_reward
     # ============================================================================
-    def propagate_reward( self ):
-        
+    def propagate_reward(self):
+
         # === Get Reward Based on Condition of Most Recent State in History === #
-        last_state , last_action = self.history[-1]
-        reward                   = self.calculate_reward( last_state )
-        
+        last_state, last_action = self.history[-1]
+        reward = self.calculate_reward(last_state)
+
         # === Iterate Backwards Through Recorded History === #
-        for i in range( len( self.history ) - 2 , -1 , -1 ):
-            
+        for i in range(len(self.history) - 2, -1, -1):
             # === Extract State Action Pair === #
-            state , action           = self.history[i]
-            next_state , next_action = self.history[i+1]
-            
+            state, action = self.history[i]
+            next_state, next_action = self.history[i + 1]
+
             # === Apply Reward === #
-            self.apply_reward( state , action , reward )
-            
+            self.apply_reward(state, action, reward)
+
             # === Discount Reward === #
             reward *= self.reward_discount
-            
+
         # === Clear All Rewarded History (Last in List was Not) === #
         self.history = self.history[-1:]
-        
+
         # === Housekeeping for End of Episode === #
-        self.update_explore_chance( )
+        self.update_explore_chance()
         self.episode += 1
         if self.episode >= self.max_episodes:
             self.is_training = False
-            self.save_model( )
-        
+            self.save_model()
+
         return  # propagate_reward
-    
-    
-    
+
     # ============================================================================
     # RLAgent.load_model
     # ============================================================================
-    def load_model( self , use_existing_model ):
-        
+    def load_model(self, use_existing_model):
+
         # === Necessary Imports === #
         from ast import literal_eval
 
         # === If Told to Use Saved Model === #
         if use_existing_model:
-            
+
             # === Try to Load the Model === #
             try:
-                
+
                 # === Load Model === #
-                model = dict( )
-                with open( self.model_file , 'r' ) as infile:
-                    model_text = infile.read( ).split( '\n' )
-                
+                model = dict()
+                with open(self.model_file, 'r') as infile:
+                    model_text = infile.read().split('\n')
+
                 # === Interpret Model Line-by-Line === #
                 for line in model_text:
                     if line:
-                        key,value  = line.split( ':' )
-                        key        = literal_eval( key )
-                        value      = literal_eval( value )
+                        key, value = line.split(':')
+                        key = literal_eval(key)
+                        value = literal_eval(value)
                         model[key] = value
-                        
+
                 # === If Successfully Loaded, Return the Model === #
                 return model
-            
+
             # === If Loading Fails, Return Empty Model Instead === #
             except:
-                return dict( )
-            
+                return dict()
+
         # === If Told Not to Use Saved Model === #
-        return dict( )
-    
-    
-    
+        return dict()
+
     # ============================================================================
     # RLAgent.save_model
+    #
+    #   @Update:
+    #       Added optional fileName for a save-as feature
     # ============================================================================
-    def save_model( self ):
+    def save_model(self, fileName = None):
         # === Open Model File to Save === #
-        with open( self.model_file , 'w' ) as outfile:
-            
-            # === Iteratively Write "Key:Value" to File === #
-            for state in self.q_table:
-                outfile.write( '{}:{}\n'.format( state , self.q_table[state] ) )
-            
+        if fileName is None:
+            with open(self.model_file, 'w') as outfile:
+                # === Iteratively Write "Key:Value" to File === #
+                for state in self.q_table:
+                    outfile.write('{}:{}\n'.format(state, self.q_table[state]))
+        else:
+            with open(fileName, 'w') as outfile:
+                # === Iteratively Write "Key:Value" to File === #
+                for state in self.q_table:
+                    outfile.write('{}:{}\n'.format(state, self.q_table[state]))
+
         return  # save_model
-    
-    
-    
+
     # ============================================================================
     # RLAgent.act
     # ============================================================================
-    def act( self , frame ):
-        
+    def act(self, frame):
+
         # === Convert Frame to State (VFA with State Aggregation) === #
-        state = self.frame_to_state( frame )
-        
+        state = self.frame_to_state(frame)
+
         # === Select Action Given the State === #
-        action_idx = self.select_action( state )
-        
+        action_idx = self.select_action(state)
+
         # === If Training, Update History === #
         if self.is_training:
-            self.history.append( ( state , action_idx ) )
-        
+            self.history.append((state, action_idx))
+
         # === Propagate Reward When History is Desired Length === #
-        if len( self.history ) > self.episode_length:
-            self.propagate_reward( )
-        
+        if len(self.history) > self.episode_length:
+            self.propagate_reward()
+
         # === Return Action Taken === #
         return self.action_space[action_idx]
