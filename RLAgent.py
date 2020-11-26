@@ -11,6 +11,27 @@
 # ================================================================================
 
 
+
+# ================================================================================
+# IMPORTS & INITIALIZATION
+# ================================================================================
+#
+#   * tensorflow: used for the CNN classifier used in state space VFA from image 
+#                 frames
+#
+#   * gpus: used for extracting the physical gpus
+#
+#   * experimental memory growth = True: tensorflow was finding errors with 
+#                  "finding the convolution algorithm" otherwise. It is untested
+#                  whether or not this works on machines without a GPU
+#
+# ================================================================================
+import tensorflow as tf
+gpus= tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(gpus[0], True)
+
+
+
 # ================================================================================
 # CLASS: RLAgent
 # ================================================================================
@@ -25,6 +46,31 @@
 #        * List of the possible actions to take. For now it's been hard-coded to
 #          be throttle, left, and right. We may revise to take all keys from the
 #          EmulatorInterface's input mapping.
+#
+#   - classifier_file:
+#        * String containing the path to the keras model used for the frame state classifier
+#
+#   - classifier_model
+#        * keras model resulting from loading the classifier file. Used for interpreting
+#          the input frame as a state.
+#
+#   - classifier_image_shape
+#        * dimensions needed for the image that the classifier expects
+#
+#   - classifier_input_shape
+#        * dimensions that that the model's input layer expects
+#
+#   - frame_classes
+#        * dictionary mapping the indices of the output layer to specific classes
+#             > 'center': mario is in the center of the screen
+#             > 'near_left': mario is near the left of the track
+#             > 'near_right': mario is near the right of the track
+#             > 'off_left': mario is off the left side of the track
+#             > 'off_right': mario is off the right side of the track
+#             > 'wall_left': mario is facing a wall on the left side of the track
+#             > 'wall_right': mario is facing a wall on the right side of the track
+#             > 'tunnel_left': mario is facing the track with the tunnel opening on his left
+#             > 'tunnel_right': mario is facing the track with the tunnel opening on his right
 #
 #   - q_table:
 #        * the model stored in the form of a dictionary of lists. The keys of the
@@ -87,40 +133,24 @@
 #   - Initialize all attributes appropriately
 #
 # ================================================================================
-# MEMBER FUNCTION: RLAgent.frame_to_state( frame , n_features , center_margin )
+# MEMBER FUNCTION: RLAgent.frame_to_state( frame )
 # ================================================================================
 #
 # Input:
 #   - frame:
 #        * image representation of the current game's frame
-#   - n_features=5:
-#        * the length of the state vector to be returned
-#             - 3^n_features possible state vectors
-#   - center_margin=0.05:
-#        * The margin (proportion to frame width) in which a value is considered
-#          "near enough" to the center
 #
 # Output:
-#   - tuple representation of the state after performing state aggregation
-#   - length is n_features
-#   - each value in the output is in the set {-1,0,1}
-#        * -1: the average edge index in the image is in the left half
-#        *  0: the average edge index in the image is near enough to center
-#        * +1: the average edge index in the image is in the right half
+#   - string representing one of the 8 classes defined in self.frame_classes, representing
+#     the model's classification of the input frame
 #
 # Task:
 #   - Convert the given frame to grayscale
-#   - Locate the canny edges of the image using opencv
-#   - select n_features representative rows from the lower 2/3 of the frame
-#   - find the average index of the canny edges for each representative row
-#   - if the representative edge is less than the margin below center, vector value
-#     is set to -1
-#   - if the representative edge is more than the margin above center, vector value
-#     is set to +1
-#   - If the representative edgge is within the margin of the center, vector value
-#     is set to 0
-#   - combine all values to a single tuple
-#   - return that tuple
+#   - Resize the frame to 80px wide by 64px tall
+#   - use the classifier_model to predict the class of the frame
+#        * classifier was trained to have an accuracy of 0.9980 on a 35,000 image
+#          dataset (~26,000 training and ~9,000 validation)
+#   - return the name of the class with the greatest prediction value
 #
 # ================================================================================
 # MEMBER FUNCTION: RLAgent.update_explore_chance( )
@@ -218,6 +248,23 @@
 #     state-action pair in the QTable.
 #
 # ================================================================================
+# MEMBER FUNCTION: RLAgent.new_reward( state , action )
+# ================================================================================
+#
+# Input:
+#   - state:
+#        * The state to receive the reward
+#   - action:
+#        * the action to receive the reward
+#
+# Output:
+#   - value representing the reward for the action taken in the given state
+#
+# Task:
+#   - lookup the base-reward table to determine reward values
+#   - Return the reward value
+#
+# ================================================================================
 # MEMBER FUNCTION: RLAgent.propagate_reward( )
 # ================================================================================
 #
@@ -228,11 +275,9 @@
 #   - No return
 #
 # Task:
-#   - compute reward based on status of final state in the episode's history
+#   - compute reward based next state
 #   - iterate backwards through the recorded history of state-action pairs, applying
-#     the reward to that state-action pair. Do not iterate the most recent state that
-#     the reward was calculated from since we don't know the result of its actions.
-#   - decay the reward each iteration
+#     the reward to that state-action pair. 
 #   - clear all states in the history that were rewarded (exclude the most recent
 #     since it we don't apply reward to it)
 #
@@ -311,7 +356,25 @@ class RLAgent:
         self.model_file = 'model.txt'
 
         # === Action Space Housekeeping === #
-        self.action_space = ['left', 'right', 'throttle']
+        #self.action_space = [ 'left' , 'right' , 'throttle' , 'up' , 'down' ]
+        self.action_space = [ 'left' , 'right' , 'throttle' ]
+        
+        # === State Space Classification Housekeeping === #
+        self.classifier_file        = 'classifier_v3.h5'
+        self.classifier_model       = tf.keras.models.load_model( self.classifier_file )
+        self.classifier_image_shape = ( 80 , 64 )
+        self.classifier_input_shape = (  1 , 80 , 64 , 1 )
+        self.frame_classes          = {
+            0:'center',
+            1:'near_left',
+            2:'near_right',
+            3:'off_left',
+            4:'off_right',
+            5:'wall_left',
+            6:'wall_right',
+            7:'tunnel_left',
+            8:'tunnel_right'
+        }
 
         # === Initialize Model === #
         self.q_table = self.load_model(use_existing_model)
@@ -323,9 +386,9 @@ class RLAgent:
         self.max_episodes = max_episodes
 
         # === Explore/Exploit Housekeeping === #
-        self.explore_chance = 0.99
-        self.explore_decay = 0.99
-        self.explore_min = 0.1
+        self.explore_chance = 0.50#0.99
+        self.explore_decay = 0.90#0.99
+        self.explore_min = 0.01
 
         # === History Housekeeping === #
         self.history = list()  # maybe give default if we want |history| > 1
@@ -339,54 +402,21 @@ class RLAgent:
     # ============================================================================
     # RLAgent.frame_to_state
     # ============================================================================
-    def frame_to_state(self, frame, n_features=5, center_margin=0.05):
+    def frame_to_state( self , frame ):
 
         # === Necessary Imports === #
         import numpy as np
-        import cv2
-
-        # === Housekeeping === #
-        resize_scale = 5
-
-        # === Image Preprocessing === #
-        gray = frame.convert('L')
-        small = gray.resize((gray.size[0] // resize_scale, gray.size[1] // resize_scale))
-
-        edges = cv2.Canny(np.asarray(small), 150, 200)
-
-        self.processedImage = edges # Stores the current image we processed
-
-        # === Select Representative Rows === #
-        rows = [i for i in range(edges.shape[0] // 2, edges.shape[0] - int(edges.shape[0] * 0.1),
-                                 (edges.shape[0] - int(edges.shape[0] * 0.1)) // 2 // n_features)]
-        while len(rows) > n_features:
-            rows = rows[:-1]
-
-        # === Determine Threshold for "Center" === #
-        center = edges.shape[1] // 2
-        left = center - edges.shape[1] * center_margin
-        right = center + edges.shape[1] * center_margin
-
-        # === Generate the State "Vector" === #
-        state = tuple()
-        for rowslice in edges[rows]:
-            locs = np.where(rowslice == 255)[0]
-            avg = locs.mean() if len(locs) > 0 else center
-
-            # === More Left Edges than Right === #
-            if avg < left:
-                state += (-1,)
-
-            # === More Right Edges than Left
-            elif avg > right:
-                state += (1,)
-
-            # === Edges Approximately Even on Left and Right === #
-            else:
-                state += (0,)
-
-        # === Return the State === #
-        return state  # frame_to_state
+        
+        # === Process the Frame === #
+        processed = frame.convert( 'L' ).resize( ( 80 , 64 ) )
+        img_arr   = np.asarray( processed )
+        self.processedImage = img_arr
+        img_arr   = img_arr.reshape( ( 1 , img_arr.shape[0] , img_arr.shape[1] , 1) )
+        result    = self.classifier_model.predict( img_arr )
+        state     = np.argmax( result )
+        
+        # === Return the Frame's Class as the State === #
+        return self.frame_classes[state]
 
     # ============================================================================
     # RLAgent.update_explore_chance
@@ -450,6 +480,14 @@ class RLAgent:
         # === Necessary Imports === #
         import numpy as np
 
+        if next_state == 'center':
+            reward = 0
+        elif next_state in ['near_left', 'near_right']:
+            reward = -50
+        elif next_state in ['off_left','off_right','wall_left','wall_right']:
+            reward = -100
+        return reward
+
         # === Reward Function === #
         reward = 100 * len(next_state) - 100 * abs(np.sum(next_state))
 
@@ -474,39 +512,82 @@ class RLAgent:
         self.q_table[state] = q_value
 
         return  # apply_reward
+        
+        
+    # ============================================================================
+    # RLAgent.new_reward
+    # ============================================================================
+    def new_reward( self , state , action ):
+    
+        # === Lookup Table for Base Reward Values === #
+        reward_table = {
+            'center':{
+                'left':0,
+                'right':0,
+                'throttle':100
+            },
+            'near_left':{
+                'left':-100,
+                'right':100,
+                'throttle':100
+            },
+            'near_right':{
+                'left':100,
+                'right':-100,
+                'throttle':100
+            },
+            'off_left':{
+                'left':-100,
+                'right':100,
+                'throttle':100
+            },
+            'off_right':{
+                'left':100,
+                'right':-100,
+                'throttle':100
+            },
+            'wall_left':{
+                'left':-100,
+                'right':100,
+                'throttle':0
+            },
+            'wall_right':{
+                'left':100,
+                'right':-100,
+                'throttle':0
+            },
+            'tunnel_left':{
+                'left':100,
+                'right':-100,
+                'throttle':100
+            },
+            'tunnel_right':{
+                'left':-100,
+                'right':100,
+                'throttle':100
+            }
+        }
+        
+        # === Return the Reward === #
+        return reward_table[state][self.action_space[action]]
 
     # ============================================================================
     # RLAgent.propagate_reward
     # ============================================================================
     def propagate_reward(self):
-
-        # === Get Reward Based on Condition of Most Recent State in History === #
-        last_state, last_action = self.history[-1]
-        reward = self.calculate_reward(last_state)
-
-        # === Iterate Backwards Through Recorded History === #
-        for i in range(len(self.history) - 2, -1, -1):
-            # === Extract State Action Pair === #
-            state, action = self.history[i]
-            next_state, next_action = self.history[i + 1]
-
-            # === Apply Reward === #
-            self.apply_reward(state, action, reward)
-
-            # === Discount Reward === #
-            reward *= self.reward_discount
-
-        # === Clear All Rewarded History (Last in List was Not) === #
-        self.history = self.history[-1:]
-
+    
+        # === Iteratively Reward Each State-Action Pair in the History === #
+        for state,action in self.history:
+            reward = self.new_reward( state , action )
+            self.apply_reward( state , action , reward )
+            
         # === Housekeeping for End of Episode === #
         self.update_explore_chance()
         self.episode += 1
         if self.episode >= self.max_episodes:
             self.is_training = False
             self.save_model()
-
-        return  # propagate_reward
+        return
 
     # ============================================================================
     # RLAgent.load_model
@@ -584,6 +665,9 @@ class RLAgent:
         # === Propagate Reward When History is Desired Length === #
         if len(self.history) > self.episode_length:
             self.propagate_reward()
+
+        print('DEBUG: Action = {}'.format(self.action_space[action_idx]))
+        #print('DEBUG: Reward = {}\n'.format(self.reward(self.get_q_value(state,action)))
 
         # === Return Action Taken === #
         return self.action_space[action_idx]
