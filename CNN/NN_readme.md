@@ -11,7 +11,7 @@
 
  - The jupyter notebook `video_to_image_data.ipynb` uses OpenCV to parse the mp4 files into individual frames. 
  - Frames are partitioned into the `dataset/<class>/` directory, and are saved as `frame<number>.jpg` within the corresponding directory
- - In order to fit on GitHub, these images were not present in the repository, instead, you are going to have to run the appropriate notebook to process the mp4 files directly into the dataset folder
+ - Due to the file sizes of the dataset, instead, a public link to the Google Drive is provided. Within the drive folder is the raw .mp4 files uses, as well as a .7z compression of the dataset. Link: https://drive.google.com/drive/folders/1LRs3SeJ6_9lmR7AN6jdRCtmEvixoDGaG?usp=sharing. 
  - In total, slighly more than 35,000 image frames are produced.
  
 ## Data Modeling
