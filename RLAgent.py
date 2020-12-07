@@ -360,7 +360,7 @@ class RLAgent:
         self.action_space = [ 'left' , 'right' , 'throttle' ]
         
         # === State Space Classification Housekeeping === #
-        self.classifier_file        = 'classifier_v3.h5'
+        self.classifier_file        = 'classifier_v4.h5'
         self.classifier_model       = tf.keras.models.load_model( self.classifier_file )
         self.classifier_image_shape = ( 80 , 64 )
         self.classifier_input_shape = (  1 , 80 , 64 , 1 )
