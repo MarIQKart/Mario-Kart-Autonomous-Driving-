@@ -15,7 +15,6 @@ The program has been tested with the use of tensorflow-gpu with cudnn support fo
 ## Files:
 
 * **`CNN/`:** this directory contains all file files and information relevant to training the CNN classifier used in state-aggregation. For more information about the contents of this directory, see `CNN/NN_readme.md`.
-* **`Final Project Report.pdf`:** this file contains our final report at the time of the project submission. The report contains a more thorough description and analysis of the program, it's performance, and its shortcomings. Please view this document for a more thorough understanding of the project.
 * **`EmulatorInterface.py`:** class method used by the program for interfacing with the emulator window. This file is responsible for managing emulated keypresses and other interactions with the game window.
 * **`Graphics.py`:** contains function definitions necessary for operating upon, transforming, and producing graphics.
 * **`HitboxFinder.py`:** (deprecated) This file was used for locating Mario's hitbox within the captured frame using a Template Matching algorithm through open CV
@@ -28,6 +27,32 @@ The program has been tested with the use of tensorflow-gpu with cudnn support fo
 * **`frame_array_to_state.py`:** (deprecated) this file contains a function definition for implementing Canny Edge detection for interpretation of image frames into feature vectors
 * **`main.py`:** main driver of the program. This file should be run in order to run the program
 * **`template.png`:** (deprecated) this file contains the template image used for the template matching algorithm
+
+## Initial Setup:
+1. Install the Mupen64 Emulator from their official website (http://mupen64.emulation64.com/down.htm) The pro version, Mupen64Plus, is not needed.
+2. Install the Dolphin Emulator from their official website (https://dolphin-emu.org/)
+3. Change the key bindinds in the Mupen64 emulator so that the following changes have been made: 
+<ul> 
+  <li>Left Arrow Key: l</li>
+  <li>Right Arrow Key: r</li>
+  <li>Up Arrow Key: u</li>
+  <li>Down Arrow Key: d</li>
+</ul>
+
+4. Change the key bindinds in the Dolphin emulator so that the following changes have been made: 
+<ul> 
+  <li>A: X</li>
+  <li>X: M</li>
+  <li>B: B</li>
+  <li>Y: Y</li>
+  <li>Left Anolog Stick: l</li>
+  <li>Right Anolog Stick: r</li>
+  <li>Up Anolog Stick: u</li>
+  <li>Down Anolog Stick: l</li>
+</ul>
+
+5. Download the ROM/ISO file for the Nintendo64 verion of the game (https://www.emulatorgames.net/roms/nintendo-64/mario-kart-64-v11/)
+6. Download the ROM/ISO for the Mario-Kart Double Dash GameCube game (https://vimm.net/vault/7503)
 
 ## Running the Program:
 
