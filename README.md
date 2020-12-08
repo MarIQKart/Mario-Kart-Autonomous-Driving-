@@ -15,6 +15,7 @@ The program has been tested with the use of tensorflow-gpu with cudnn support fo
 ## Files:
 
 * **`CNN/`:** this directory contains all file files and information relevant to training the CNN classifier used in state-aggregation. For more information about the contents of this directory, see `CNN/NN_readme.md`.
+* **`Final Project Report.pdf`:** this file contains our final report at the time of the project submission. The report contains a more thorough description and analysis of the program, it's performance, and its shortcomings. Please view this document for a more thorough understanding of the project.
 * **`EmulatorInterface.py`:** class method used by the program for interfacing with the emulator window. This file is responsible for managing emulated keypresses and other interactions with the game window.
 * **`Graphics.py`:** contains function definitions necessary for operating upon, transforming, and producing graphics.
 * **`HitboxFinder.py`:** (deprecated) This file was used for locating Mario's hitbox within the captured frame using a Template Matching algorithm through open CV
